@@ -13180,6 +13180,13 @@ A deduction guide for a container adaptor shall not participate in overload reso
 \item It has both \tcode{Container} and \tcode{Allocator} template parameters, and \tcode{uses_allocator_v<Container, Allocator>} is \tcode{false}.
 \item It has both \tcode{KeyContainer} and \tcode{Allocator} template parameters, and
 \tcode{uses_allocator_v<KeyContai\-ner, Allocator>} is \tcode{false}.
+\item It has both \tcode{KeyContainer} and \tcode{Compare} template parameters, and
+\begin{codeblock}
+is_invocable_v<const Compare&,
+              const typename KeyContainer::value_type&,
+              const typename KeyContainer::value_type&>
+\end{codeblock}
+is not a valid expression or is \tcode{false}.
 \item It has both \tcode{MappedContainer} and \tcode{Allocator} template parameters, and
 \tcode{uses_allocator_v<Mapped\-Container, Allocator>} is \tcode{false}.
 \end{itemize}
@@ -14743,15 +14750,24 @@ namespace std {
     // \ref{flat.map.cons}, construct/copy/destroy
     flat_map() : flat_map(key_compare()) { }
 
-    flat_map(key_container_type key_cont, mapped_container_type mapped_cont);
+    flat_map(key_container_type key_cont, mapped_container_type mapped_cont,
+             const key_compare& comp = key_compare());
     template<class Allocator>
       flat_map(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
                const Allocator& a);
+    template<class Allocator>
+      flat_map(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
+               const key_compare& comp, const Allocator& a);
 
-    flat_map(sorted_unique_t, key_container_type key_cont, mapped_container_type mapped_cont);
+    flat_map(sorted_unique_t, key_container_type key_cont, mapped_container_type mapped_cont,
+             const key_compare& comp = key_compare());
     template<class Allocator>
       flat_map(sorted_unique_t, const key_container_type& key_cont,
                const mapped_container_type& mapped_cont, const Allocator& a);
+    template<class Allocator>
+      flat_map(sorted_unique_t, const key_container_type& key_cont,
+               const mapped_container_type& mapped_cont,
+               const key_compare& comp, const Allocator& a);
 
     explicit flat_map(const key_compare& comp)
       : c(), compare(comp) { }
@@ -14959,25 +14975,35 @@ namespace std {
     };
   };
 
-  template<class KeyContainer, class MappedContainer>
-    flat_map(KeyContainer, MappedContainer)
+  template<class KeyContainer, class MappedContainer,
+           class Compare = less<typename KeyContainer::value_type>>
+    flat_map(KeyContainer, MappedContainer, Compare = Compare())
       -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
-                  less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+                  Compare, KeyContainer, MappedContainer>;
 
   template<class KeyContainer, class MappedContainer, class Allocator>
     flat_map(KeyContainer, MappedContainer, Allocator)
       -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
                   less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
-
-  template<class KeyContainer, class MappedContainer>
-    flat_map(sorted_unique_t, KeyContainer, MappedContainer)
+  template<class KeyContainer, class MappedContainer, class Compare, class Allocator>
+    flat_map(KeyContainer, MappedContainer, Compare, Allocator)
       -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
-                  less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+                  Compare, KeyContainer, MappedContainer>;
+
+  template<class KeyContainer, class MappedContainer,
+           class Compare = less<typename KeyContainer::value_type>>
+    flat_map(sorted_unique_t, KeyContainer, MappedContainer, Compare = Compare())
+      -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
+                  Compare, KeyContainer, MappedContainer>;
 
   template<class KeyContainer, class MappedContainer, class Allocator>
     flat_map(sorted_unique_t, KeyContainer, MappedContainer, Allocator)
       -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
                   less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+  template<class KeyContainer, class MappedContainer, class Compare, class Allocator>
+    flat_map(sorted_unique_t, KeyContainer, MappedContainer, Compare, Allocator)
+      -> flat_map<typename KeyContainer::value_type, typename MappedContainer::value_type,
+                  Compare, KeyContainer, MappedContainer>;
 
   template<class InputIterator, class Compare = less<@\exposid{iter-key-type}@<InputIterator>>>
     flat_map(InputIterator, InputIterator, Compare = Compare())
@@ -15025,15 +15051,17 @@ It has no base classes or members other than those specified.
 
 \indexlibraryctor{flat_map}%
 \begin{itemdecl}
-flat_map(key_container_type key_cont, mapped_container_type mapped_cont);
+flat_map(key_container_type key_cont, mapped_container_type mapped_cont,
+         const key_compare& comp = key_compare());
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \tcode{c.keys} with \tcode{std::move(key_cont)} and
-\tcode{c.values} with \tcode{std::move(mapped_cont)};
-value-initializes \tcode{compare};
+Initializes
+\tcode{c.keys} with \tcode{std::move(key_cont)},
+\tcode{c.values} with \tcode{std::move(mapped_cont)}, and
+\tcode{compare} with \tcode{comp};
 sorts the range \range{begin()}{end()} with respect to \tcode{value_comp()}; and
 finally erases the duplicate elements as if by:
 \begin{codeblock}
@@ -15056,6 +15084,9 @@ where $N$ is the value of \tcode{key_cont.size()} before this call.
 template<class Allocator>
   flat_map(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
            const Allocator& a);
+template<class Allocator>
+  flat_map(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
+           const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -15066,26 +15097,30 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_map(key_cont, mapped_cont)},
+Equivalent to \tcode{flat_map(key_cont, mapped_cont)} and
+\tcode{flat_map(key_cont, mapped_cont, comp)}, respectively,
 except that \tcode{c.keys} and \tcode{c.values} are constructed with
 uses-allocator construction\iref{allocator.uses.construction}.
 
 \pnum
 \complexity
-Same as \tcode{flat_map(key_cont, mapped_cont)}.
+Same as \tcode{flat_map(key_cont, mapped_cont)} and
+\tcode{flat_map(key_cont, mapped_cont, comp)}, respectively.
 \end{itemdescr}
 
 \indexlibraryctor{flat_map}%
 \begin{itemdecl}
-flat_map(sorted_unique_t, key_container_type key_cont, mapped_container_type mapped_cont);
+flat_map(sorted_unique_t, key_container_type key_cont, mapped_container_type mapped_cont,
+         const key_compare& comp = key_compare());
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \tcode{c.keys} with \tcode{std::move(key_cont)} and
-\tcode{c.values} with \tcode{std::move(mapped_cont)};
-value-initializes \tcode{compare}.
+Initializes
+\tcode{c.keys} with \tcode{std::move(key_cont)},
+\tcode{c.values} with \tcode{std::move(mapped_cont)}, and
+\tcode{compare} with \tcode{comp}.
 
 \pnum
 \complexity
@@ -15097,6 +15132,10 @@ Constant.
 template<class Allocator>
   flat_map(sorted_unique_t s, const key_container_type& key_cont,
            const mapped_container_type& mapped_cont, const Allocator& a);
+template<class Allocator>
+  flat_map(sorted_unique_t s, const key_container_type& key_cont,
+           const mapped_container_type& mapped_cont, const key_compare& comp,
+           const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -15107,7 +15146,8 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_map(s, key_cont, mapped_cont)},
+Equivalent to \tcode{flat_map(s, key_cont, mapped_cont)} and
+\tcode{flat_map(s, key_cont, \linebreak{}mapped_cont, comp)}, respectively,
 except that \tcode{c.keys} and \tcode{c.values} are constructed
 with uses-allocator construction\iref{allocator.uses.construction}.
 
@@ -15890,16 +15930,25 @@ namespace std {
     // \ref{flat.multimap.cons}, construct/copy/destroy
     flat_multimap() : flat_multimap(key_compare()) { }
 
-    flat_multimap(key_container_type key_cont, mapped_container_type mapped_cont);
+    flat_multimap(key_container_type key_cont, mapped_container_type mapped_cont,
+                  const key_compare& comp = key_compare());
     template<class Allocator>
       flat_multimap(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
                     const Allocator& a);
+    template<class Allocator>
+      flat_multimap(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
+                    const key_compare& comp, const Allocator& a);
 
     flat_multimap(sorted_equivalent_t,
-                  key_container_type key_cont, mapped_container_type mapped_cont);
+                  key_container_type key_cont, mapped_container_type mapped_cont,
+                  const key_compare& comp = key_compare());
     template<class Allocator>
       flat_multimap(sorted_equivalent_t, const key_container_type& key_cont,
                     const mapped_container_type& mapped_cont, const Allocator& a);
+    template<class Allocator>
+      flat_multimap(sorted_equivalent_t, const key_container_type& key_cont,
+                    const mapped_container_type& mapped_cont,
+                    const key_compare& comp, const Allocator& a);
 
     explicit flat_multimap(const key_compare& comp)
       : c(), compare(comp) { }
@@ -16071,25 +16120,35 @@ namespace std {
     key_compare compare;        // \expos
   };
 
-  template<class KeyContainer, class MappedContainer>
-    flat_multimap(KeyContainer, MappedContainer)
+  template<class KeyContainer, class MappedContainer,
+           class Compare = less<typename KeyContainer::value_type>>
+    flat_multimap(KeyContainer, MappedContainer, Compare = Compare())
       -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
-                       less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+                       Compare, KeyContainer, MappedContainer>;
 
   template<class KeyContainer, class MappedContainer, class Allocator>
     flat_multimap(KeyContainer, MappedContainer, Allocator)
       -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
                        less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
-
-  template<class KeyContainer, class MappedContainer>
-    flat_multimap(sorted_equivalent_t, KeyContainer, MappedContainer)
+  template<class KeyContainer, class MappedContainer, class Compare, class Allocator>
+    flat_multimap(KeyContainer, MappedContainer, Compare, Allocator)
       -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
-                       less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+                       Compare, KeyContainer, MappedContainer>;
+
+  template<class KeyContainer, class MappedContainer,
+           class Compare = less<typename KeyContainer::value_type>>
+    flat_multimap(sorted_equivalent_t, KeyContainer, MappedContainer, Compare = Compare())
+      -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
+                       Compare, KeyContainer, MappedContainer>;
 
   template<class KeyContainer, class MappedContainer, class Allocator>
     flat_multimap(sorted_equivalent_t, KeyContainer, MappedContainer, Allocator)
       -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
                        less<typename KeyContainer::value_type>, KeyContainer, MappedContainer>;
+  template<class KeyContainer, class MappedContainer, class Compare, class Allocator>
+    flat_multimap(sorted_equivalent_t, KeyContainer, MappedContainer, Compare, Allocator)
+      -> flat_multimap<typename KeyContainer::value_type, typename MappedContainer::value_type,
+                       Compare, KeyContainer, MappedContainer>;
 
   template<class InputIterator, class Compare = less<@\exposid{iter-key-type}@<InputIterator>>>
     flat_multimap(InputIterator, InputIterator, Compare = Compare())
@@ -16142,15 +16201,17 @@ specified.
 
 \indexlibraryctor{flat_multimap}%
 \begin{itemdecl}
-flat_multimap(key_container_type key_cont, mapped_container_type mapped_cont);
+flat_multimap(key_container_type key_cont, mapped_container_type mapped_cont,
+              const key_compare& comp = key_compare());
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \tcode{c.keys} with \tcode{std::move(key_cont)} and
-\tcode{c.values} with \tcode{std::move(mapped_cont)};
-value-initializes \tcode{compare}; and
+Initializes
+\tcode{c.keys} with \tcode{std::move(key_cont)},
+\tcode{c.values} with \tcode{std::move(mapped_cont)}, and
+\tcode{compare} with \tcode{comp};
 sorts the range \range{begin()}{end()} with respect to \tcode{value_comp()}.
 
 \pnum
@@ -16165,6 +16226,9 @@ where $N$ is the value of \tcode{key_cont.size()} before this call.
 template<class Allocator>
   flat_multimap(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
                 const Allocator& a);
+template<class Allocator>
+  flat_multimap(const key_container_type& key_cont, const mapped_container_type& mapped_cont,
+                const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -16175,26 +16239,30 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_multimap(key_cont, mapped_cont)},
+Equivalent to \tcode{flat_multimap(key_cont, mapped_cont)} and
+\tcode{flat_multimap(key_cont, \linebreak{}mapped_cont, comp)}, respectively,
 except that \tcode{c.keys} and \tcode{c.values} are constructed
 with uses-allocator construction\iref{allocator.uses.construction}.
 
 \pnum
 \complexity
-Same as \tcode{flat_multimap(key_cont, mapped_cont)}.
+Same as \tcode{flat_multimap(key_cont, mapped_cont)} and
+\tcode{flat_multimap(key_cont, \linebreak{}mapped_cont, comp)}, respectively.
 \end{itemdescr}
 
 \indexlibraryctor{flat_multimap}%
 \begin{itemdecl}
-flat_multimap(sorted_equivalent_t, key_container_type key_cont, mapped_container_type mapped_cont);
+flat_multimap(sorted_equivalent_t, key_container_type key_cont, mapped_container_type mapped_cont,
+              const key_compare& comp = key_compare());
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \tcode{c.keys} with \tcode{std::move(key_cont)} and
-\tcode{c.values} with \tcode{std::move(mapped_cont)};
-value-initializes \tcode{compare}.
+Initializes
+\tcode{c.keys} with \tcode{std::move(key_cont)},
+\tcode{c.values} with \tcode{std::move(mapped_cont)}, and
+\tcode{compare} with \tcode{comp}.
 
 \pnum
 \complexity
@@ -16206,6 +16274,10 @@ Constant.
 template<class Allocator>
   flat_multimap(sorted_equivalent_t s, const key_container_type& key_cont,
                 const mapped_container_type& mapped_cont, const Allocator& a);
+template<class Allocator>
+  flat_multimap(sorted_equivalent_t s, const key_container_type& key_cont,
+                const mapped_container_type& mapped_cont, const key_compare& comp,
+                const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -16216,7 +16288,8 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_multimap(s, key_cont, mapped_cont)},
+Equivalent to \tcode{flat_multimap(s, key_cont, mapped_cont)} and
+\tcode{flat_multimap(s, key_cont, mapped_cont, comp)}, respectively,
 except that \tcode{c.keys} and \tcode{c.val\-ues} are constructed
 with uses-allocator construction\iref{allocator.uses.construction}.
 
@@ -16418,14 +16491,19 @@ namespace std {
     // \ref{flat.set.cons}, constructors
     flat_set() : flat_set(key_compare()) { }
 
-    explicit flat_set(container_type cont);
+    explicit flat_set(container_type cont, const key_compare& comp = key_compare());
     template<class Allocator>
       flat_set(const container_type& cont, const Allocator& a);
+    template<class Allocator>
+      flat_set(const container_type& cont, const key_compare& comp, const Allocator& a);
 
-    flat_set(sorted_unique_t, container_type cont)
-      : @\exposid{c}@(std::move(cont)), @\exposid{compare}@(key_compare()) { }
+    flat_set(sorted_unique_t, container_type cont, const key_compare& comp = key_compare())
+      : @\exposid{c}@(std::move(cont)), @\exposid{compare}@(comp) { }
     template<class Allocator>
       flat_set(sorted_unique_t, const container_type& cont, const Allocator& a);
+    template<class Allocator>
+      flat_set(sorted_unique_t, const container_type& cont,
+               const key_compare& comp, const Allocator& a);
 
     explicit flat_set(const key_compare& comp)
       : @\exposid{c}@(), @\exposid{compare}@(comp) { }
@@ -16590,6 +16668,28 @@ namespace std {
     key_compare @\exposid{compare}@;        // \expos
   };
 
+  template<class KeyContainer, class Compare = less<typename KeyContainer::value_type>>
+    flat_set(KeyContainer, Compare = Compare())
+      -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+  template<class KeyContainer, class Allocator>
+    flat_set(KeyContainer, Allocator)
+      -> flat_set<typename KeyContainer::value_type,
+                  less<typename KeyContainer::value_type>, KeyContainer>;
+  template<class KeyContainer, class Compare, class Allocator>
+    flat_set(KeyContainer, Compare, Allocator)
+      -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+
+  template<class KeyContainer, class Compare = less<typename KeyContainer::value_type>>
+    flat_set(sorted_unique_t, KeyContainer, Compare = Compare())
+      -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+  template<class KeyContainer, class Allocator>
+    flat_set(sorted_unique_t, KeyContainer, Allocator)
+      -> flat_set<typename KeyContainer::value_type,
+                  less<typename KeyContainer::value_type>, KeyContainer>;
+  template<class KeyContainer, class Compare, class Allocator>
+    flat_set(sorted_unique_t, KeyContainer, Compare, Allocator)
+      -> flat_set<typename KeyContainer::value_type, Compare, KeyContainer>;
+
   template<class InputIterator, class Compare = less<@\placeholder{iter-value-type}@<InputIterator>>>
     flat_set(InputIterator, InputIterator, Compare = Compare())
       -> flat_set<@\placeholder{iter-value-type}@<InputIterator>, Compare>;
@@ -16629,14 +16729,14 @@ namespace std {
 
 \indexlibraryctor{flat_set}%
 \begin{itemdecl}
-explicit flat_set(container_type cont);
+explicit flat_set(container_type cont, const key_compare& comp = key_compare());
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \exposid{c} with \tcode{std::move(cont)},
-value-initializes \exposid{compare},
+Initializes \exposid{c} with \tcode{std::move(cont)} and
+\exposid{compare} with \tcode{comp},
 sorts the range \range{begin()}{end()} with respect to \exposid{compare}, and
 finally erases all but the first element
 from each group of consecutive equivalent elements.
@@ -16651,6 +16751,8 @@ otherwise $N \log N$, where $N$ is the value of \tcode{cont.size()} before this 
 \begin{itemdecl}
 template<class Allocator>
   flat_set(const container_type& cont, const Allocator& a);
+template<class Allocator>
+  flat_set(const container_type& cont, const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -16660,19 +16762,23 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_set(cont)},
+Equivalent to
+\tcode{flat_set(cont)} and \tcode{flat_set(cont, comp)}, respectively,
 except that \exposid{c} is constructed with
 uses-allocator construction\iref{allocator.uses.construction}.
 
 \pnum
 \complexity
-Same as \tcode{flat_set(cont)}.
+Same as \tcode{flat_set(cont)} and \tcode{flat_set(cont, comp)}, respectively.
 \end{itemdescr}
 
 \indexlibraryctor{flat_set}%
 \begin{itemdecl}
 template<class Allocator>
   flat_set(sorted_unique_t s, const container_type& cont, const Allocator& a);
+template<class Allocator>
+  flat_set(sorted_unique_t s, const container_type& cont,
+           const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -16682,7 +16788,8 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_set(s, cont)},
+Equivalent to
+\tcode{flat_set(s, cont)} and \tcode{flat_set(s, cont, comp)}, respectively,
 except that \exposid{c} is constructed with
 uses-allocator construction\iref{allocator.uses.construction}.
 
@@ -17022,14 +17129,20 @@ namespace std {
     // \ref{flat.multiset.cons}, constructors
     flat_multiset() : flat_multiset(key_compare()) { }
 
-    explicit flat_multiset(container_type cont);
+    explicit flat_multiset(container_type cont, const key_compare& comp = key_compare());
     template<class Allocator>
       flat_multiset(const container_type& cont, const Allocator& a);
+    template<class Allocator>
+      flat_multiset(const container_type& cont, const key_compare& comp, const Allocator& a);
 
-    flat_multiset(sorted_equivalent_t, container_type cont)
-      : @\exposid{c}@(std::move(cont)), @\exposid{compare}@(key_compare()) { }
+    flat_multiset(sorted_equivalent_t, container_type cont,
+                  const key_compare& comp = key_compare())
+      : @\exposid{c}@(std::move(cont)), @\exposid{compare}@(comp) { }
     template<class Allocator>
       flat_multiset(sorted_equivalent_t, const container_type&, const Allocator& a);
+    template<class Allocator>
+      flat_multiset(sorted_equivalent_t, const container_type& cont,
+                    const key_compare& comp, const Allocator& a);
 
     explicit flat_multiset(const key_compare& comp)
       : @\exposid{c}@(), @\exposid{compare}@(comp) { }
@@ -17196,6 +17309,28 @@ namespace std {
     key_compare @\exposid{compare}@;    // \expos
   };
 
+  template<class KeyContainer, class Compare = less<typename KeyContainer::value_type>>
+    flat_multiset(KeyContainer, Compare = Compare())
+      -> flat_multiset<typename KeyContainer::value_type, Compare, KeyContainer>;
+  template<class KeyContainer, class Allocator>
+    flat_multiset(KeyContainer, Allocator)
+      -> flat_multiset<typename KeyContainer::value_type,
+                       less<typename KeyContainer::value_type>, KeyContainer>;
+  template<class KeyContainer, class Compare, class Allocator>
+    flat_multiset(KeyContainer, Compare, Allocator)
+      -> flat_multiset<typename KeyContainer::value_type, Compare, KeyContainer>;
+
+  template<class KeyContainer, class Compare = less<typename KeyContainer::value_type>>
+    flat_multiset(sorted_equivalent_t, KeyContainer, Compare = Compare())
+      -> flat_multiset<typename KeyContainer::value_type, Compare, KeyContainer>;
+  template<class KeyContainer, class Allocator>
+    flat_multiset(sorted_equivalent_t, KeyContainer, Allocator)
+      -> flat_multiset<typename KeyContainer::value_type,
+                       less<typename KeyContainer::value_type>, KeyContainer>;
+  template<class KeyContainer, class Compare, class Allocator>
+    flat_multiset(sorted_equivalent_t, KeyContainer, Compare, Allocator)
+      -> flat_multiset<typename KeyContainer::value_type, Compare, KeyContainer>;
+
   template<class InputIterator, class Compare = less<@\placeholder{iter-value-type}@<InputIterator>>>
     flat_multiset(InputIterator, InputIterator, Compare = Compare())
       -> flat_multiset<@\placeholder{iter-value-type}@<InputIterator>, @\placeholder{iter-value-type}@<InputIterator>, Compare>;
@@ -17241,8 +17376,8 @@ explicit flat_multiset(container_type cont);
 \begin{itemdescr}
 \pnum
 \effects
-Initializes \exposid{c} with \tcode{std::move(cont)},
-value-initializes \exposid{compare}, and
+Initializes \exposid{c} with \tcode{std::move(cont)}
+and \exposid{compare} with \tcode{comp}, and
 sorts the range \range{begin()}{end()} with respect to \exposid{compare}.
 
 \pnum
@@ -17255,6 +17390,8 @@ otherwise $N \log N$, where $N$ is the value of \tcode{cont.size()} before this 
 \begin{itemdecl}
 template<class Allocator>
   flat_multiset(const container_type& cont, const Allocator& a);
+template<class Allocator>
+  flat_multiset(const container_type& cont, const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -17264,19 +17401,24 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_multiset(cont)},
+Equivalent to \tcode{flat_multiset(cont)}
+and \tcode{flat_multiset(cont, comp)}, respectively,
 except that \exposid{c} is constructed with
 uses-allocator construction\iref{allocator.uses.construction}.
 
 \pnum
 \complexity
-Same as \tcode{flat_multiset(cont)}.
+Same as \tcode{flat_multiset(cont)}
+and \tcode{flat_multiset(cont, comp)}, respectively.
 \end{itemdescr}
 
 \indexlibraryctor{flat_multiset}%
 \begin{itemdecl}
 template<class Allocator>
   flat_multiset(sorted_equivalent_t s, const container_type& cont, const Allocator& a);
+template<class Allocator>
+  flat_multiset(sorted_equivalent_t s, const container_type& cont,
+                const key_compare& comp, const Allocator& a);
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -17286,7 +17428,8 @@ template<class Allocator>
 
 \pnum
 \effects
-Equivalent to \tcode{flat_multiset(s, cont)},
+Equivalent to \tcode{flat_multiset(s, cont)}
+and \tcode{flat_multiset(s, cont, comp)}, respectively,
 except that \exposid{c} is constructed with
 uses-allocator construction\iref{allocator.uses.construction}.
 
