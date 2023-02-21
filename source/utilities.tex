@@ -15762,8 +15762,8 @@ template<class T, class Context,
          class Formatter = typename Context::template formatter_type<remove_const_t<T>>>
   concept @\defexposconcept{formattable-with}@ =                // \expos
     @\libconcept{semiregular}@<Formatter> &&
-    requires (Formatter& f, const Formatter& cf, T&& t, Context fc,
-              basic_format_parse_context<typename Context::char_type> pc)
+    requires(Formatter& f, const Formatter& cf, T&& t, Context fc,
+             basic_format_parse_context<typename Context::char_type> pc)
     {
       { f.parse(pc) } -> @\libconcept{same_as}@<typename decltype(pc)::iterator>;
       { cf.format(t, fc) } -> @\libconcept{same_as}@<typename Context::iterator>;
