@@ -585,13 +585,13 @@ The locale has a name if and only if \tcode{other} has a name.
 
 \indexlibraryctor{locale}%
 \begin{itemdecl}
-locale(const locale& other, const string& std_name, category cat);
+locale(const locale& other, const string& std_name, category cats);
 \end{itemdecl}
 
 \begin{itemdescr}
 \pnum
 \effects
-Equivalent to \tcode{locale(other, std_name.c_str(), cat)}.
+Equivalent to \tcode{locale(other, std_name.c_str(), cats)}.
 \end{itemdescr}
 
 \indexlibraryctor{locale}%
