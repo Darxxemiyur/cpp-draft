@@ -235,7 +235,7 @@ std::format("{}", t.bit);       // ill-formed, previously returned \tcode{"0"}
 \change
 Removed the \tcode{formatter} specialization
 \begin{codeblock}
-template<size_t N> struct formatter<const charT[N], charT>.
+template<size_t N> struct formatter<const charT[N], charT>;
 \end{codeblock}
 \rationale
 The specialization is inconsistent with the design of \tcode{formatter},
