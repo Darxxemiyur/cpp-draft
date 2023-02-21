@@ -135,15 +135,15 @@ namespace std {
   template<class T, class Alloc, class U, class V>
     constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
                                                     const pair<U, V>& pr) noexcept;
-  template<class T, class Alloc, @\exposconcept{pair-like}@ P>
-    constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
-                                                    P&& p) noexcept;
   template<class T, class Alloc, class U, class V>
     constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
                                                     pair<U, V>&& pr) noexcept;
   template<class T, class Alloc, class U, class V>
     constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
                                                     const pair<U, V>&& pr) noexcept;
+  template<class T, class Alloc, @\exposconcept{pair-like}@ P>
+    constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
+                                                    P&& p) noexcept;
   template<class T, class Alloc, class U>
     constexpr auto uses_allocator_construction_args(const Alloc& alloc,             // freestanding
                                                     U&& u) noexcept;
