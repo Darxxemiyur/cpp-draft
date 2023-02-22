@@ -10991,10 +10991,10 @@ template<class T> constexpr reference_wrapper<const T> cref(reference_wrapper<T>
 \begin{codeblock}
 namespace std {
   template<class T>
-    inline constexpr bool @\exposid{is-ref-wrapper}@ = false;                       // \expos
+    constexpr bool @\exposid{is-ref-wrapper}@ = false;                              // \expos
 
   template<class T>
-    inline constexpr bool @\exposid{is-ref-wrapper}@<reference_wrapper<T>> = true;
+    constexpr bool @\exposid{is-ref-wrapper}@<reference_wrapper<T>> = true;
 
   template<class R, class T, class RQ, class TQ>
     concept @\defexposconcept{ref-wrap-common-reference-exists-with}@ =                     // \expos
