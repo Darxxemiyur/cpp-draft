@@ -6505,7 +6505,7 @@ namespace std::ranges {
       is_reference_v<range_reference_t<@\exposidnc{Base}@>>;
 
     @\exposidnc{OuterIter}@ @\exposid{outer_}@ = @\exposidnc{OuterIter}@();                     // \expos, present only
-                                                        // if \tcode{\exposid{Base}} models \libconcept{forward_range}
+                                                        // if \exposid{Base} models \libconcept{forward_range}
     optional<@\exposidnc{InnerIter}@> @\exposid{inner_}@;                                 // \expos
     @\exposidnc{Parent}@* @\exposid{parent_}@  = nullptr;                                 // \expos
 
@@ -7078,7 +7078,7 @@ namespace std::ranges {
 
     @\exposid{Parent}@* @\exposid{parent_}@ = nullptr;                                          // \expos
     @\exposid{OuterIter}@ @\exposid{outer_it_}@ = @\exposid{OuterIter}@();                          // \expos, present only
-                                                                // if \tcode{\exposid{Base}} models \libconcept{forward_range}
+                                                                // if \exposid{Base} models \libconcept{forward_range}
     variant<@\exposid{PatternIter}@, @\exposid{InnerIter}@> @\exposid{inner_it_}@;                          // \expos
 
     constexpr @\exposid{iterator}@(@\exposid{Parent}@& parent, @\exposid{OuterIter}@ outer)
@@ -7230,7 +7230,7 @@ constexpr auto& @\exposid{update-inner}@();
 Equivalent to:
 \begin{codeblock}
 if constexpr (@\exposid{ref-is-glvalue}@)
-  return *@\exposid{as-lvalue}@(@\exposid{outer}@());
+  return @\exposid{as-lvalue}@(*@\exposid{outer}@());
 else
   return @\exposid{parent_}@->@\exposid{inner_}@.@\exposid{emplace-deref}@(@\exposid{outer}@());
 \end{codeblock}
@@ -7246,7 +7246,7 @@ constexpr auto& @\exposid{get-inner}@();
 Equivalent to:
 \begin{codeblock}
 if constexpr (@\exposid{ref-is-glvalue}@)
-  return *@\exposid{as-lvalue}@(@\exposid{outer}@());
+  return @\exposid{as-lvalue}@(*@\exposid{outer}@());
 else
   return *@\exposid{parent_}@->@\exposid{inner_}@;
 \end{codeblock}
@@ -7289,7 +7289,7 @@ to skip over empty inner ranges.
 constexpr @\exposid{iterator}@(@\exposid{Parent}@& parent, @\exposid{OuterIter}@ outer)
   requires @\libconcept{forward_range}@<@\exposid{Base}@>;
 constexpr explicit @\exposid{iterator}@(@\exposid{Parent}@& parent)
-  requires (!@\libconcept{forward_range}@<@\exposid{Base}@>);;
+  requires (!@\libconcept{forward_range}@<@\exposid{Base}@>);
 \end{itemdecl}
 
 \begin{itemdescr}
