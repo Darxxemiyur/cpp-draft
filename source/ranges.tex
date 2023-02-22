@@ -440,7 +440,7 @@ namespace std::ranges {
     constexpr bool enable_borrowed_range<enumerate_view<View>> =                    // freestanding
       enable_borrowed_range<View>;
 
-  namespace views { inline constexpr @\unspec@ enumerate = @\unspec@; } // freestanding
+  namespace views { inline constexpr @\unspecnc@ enumerate = @\unspecnc@; }         // freestanding
 
   // \ref{range.zip}, zip view
   template<@\libconcept{input_range}@... Views>
@@ -9363,7 +9363,7 @@ Equivalent to: \tcode{return x.\exposid{end_} - y.\exposid{current_};}
 
 \pnum
 \indexlibraryglobal{enumerate_view}%
-\tcode{enumerate_view} is a \tcode{view} whose
+\tcode{enumerate_view} is a view whose
 elements represent both the position and value from
 a sequence of elements.
 
@@ -9377,7 +9377,7 @@ the expression \tcode{views::enumerate(E)} is expression-equivalent to
 \begin{codeblock}
 vector<int> vec{ 1, 2, 3 };
 for (auto [index, value] : enumerate(vec) )
-  cout << index << ":" << value << ' ';         // prints: \tcode{0:1 1:2 2:3}
+  cout << index << ":" << value << ' ';         // prints \tcode{0:1 1:2 2:3}
 \end{codeblock}
 \end{example}
 
@@ -9406,9 +9406,9 @@ namespace std::ranges {
     constexpr explicit enumerate_view(V base);
 
     constexpr auto begin() requires (!@\exposconcept{simple-view}@<V>)
-      { return @\exposid{iterator}@<false>(ranges::begin(@\exposid{base_}@), 0); }
+    { return @\exposid{iterator}@<false>(ranges::begin(@\exposid{base_}@), 0); }
     constexpr auto begin() const requires @\exposconcept{range-with-movable-references}@<const V>
-      { return @\exposid{iterator}@<true>(ranges::begin(@\exposid{base_}@), 0); }
+    { return @\exposid{iterator}@<true>(ranges::begin(@\exposid{base_}@), 0); }
 
     constexpr auto end() requires (!@\exposconcept{simple-view}@<V>) {
       if constexpr (@\libconcept{common_range}@<V> && @\libconcept{sized_range}@<V>)
@@ -9425,10 +9425,10 @@ namespace std::ranges {
 
     constexpr auto size()
       requires @\libconcept{sized_range}@<V>
-      { return ranges::size(@\exposid{base_}@); }
+    { return ranges::size(@\exposid{base_}@); }
     constexpr auto size() const
       requires @\libconcept{sized_range}@<const V>
-      { return ranges::size(@\exposid{base_}@); }
+    { return ranges::size(@\exposid{base_}@); }
 
     constexpr V base() const & requires @\libconcept{copy_constructible}@<V> { return @\exposid{base_}@; }
     constexpr V base() && { return std::move(@\exposid{base_}@); }
@@ -9480,7 +9480,7 @@ namespace std::ranges {
     constexpr @\exposid{iterator}@(@\exposid{iterator}@<!Const> i)
       requires Const && @\libconcept{convertible_to}@<iterator_t<V>, iterator_t<@\exposid{Base}@>>;
 
-    constexpr const iterator_t<@\exposid{Base}@> & base() const & noexcept;
+    constexpr const iterator_t<@\exposid{Base}@>& base() const & noexcept;
     constexpr iterator_t<@\exposid{Base}@> base() &&;
 
     constexpr difference_type index() const noexcept;
@@ -9503,10 +9503,11 @@ namespace std::ranges {
 
     constexpr auto operator[](difference_type n) const
       requires @\libconcept{random_access_range}@<@\exposid{Base}@>
-      { return @\exposid{reference-type}@(@\exposid{pos_}@ + n, @\exposid{current_}@[n]); }
+    { return @\exposid{reference-type}@(@\exposid{pos_}@ + n, @\exposid{current_}@[n]); }
 
     friend constexpr bool operator==(const @\exposid{iterator}@& x, const @\exposid{iterator}@& y) noexcept;
     friend constexpr strong_ordering operator<=>(const @\exposid{iterator}@& x, const @\exposid{iterator}@& y) noexcept;
+
     friend constexpr @\exposid{iterator}@ operator+(const @\exposid{iterator}@& x, difference_type y)
       requires @\libconcept{random_access_range}@<@\exposid{Base}@>;
     friend constexpr @\exposid{iterator}@ operator+(difference_type x, const @\exposid{iterator}@& y)
@@ -9570,7 +9571,7 @@ Initializes \exposid{current_} with \tcode{std::move(i.\exposid{current_})} and
 
 \indexlibrarymember{base}{enumerate_view::\exposid{iterator}}%
 \begin{itemdecl}
-constexpr const iterator_t<@\exposid{Base}@> & base() const & noexcept;
+constexpr const iterator_t<@\exposid{Base}@>& base() const & noexcept;
 \end{itemdecl}
 
 \begin{itemdescr}
@@ -9625,7 +9626,7 @@ constexpr void operator++(int);
 \begin{itemdescr}
 \pnum
 \effects
-Equivalent to: \tcode{++*this;}
+Equivalent to \tcode{++*this}.
 \end{itemdescr}
 
 \indexlibrarymember{operator++}{enumerate_view::\exposid{iterator}}%
@@ -9863,7 +9864,7 @@ Equivalent to: \tcode{return \exposid{end_};}
 \indexlibrarymember{operator==}{enumerate_view::\exposid{sentinel}}%
 \begin{itemdecl}
 template<bool OtherConst>
-  requires sentinel_for<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
+  requires @\libconcept{sentinel_for}@<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
 friend constexpr bool operator==(const @\exposid{iterator}@<OtherConst>& x, const @\exposid{sentinel}@& y);
 \end{itemdecl}
 
@@ -9876,7 +9877,7 @@ Equivalent to: \tcode{return x.\exposid{current_} == y.\exposid{end_};}
 \indexlibrarymember{operator-}{enumerate_view::\exposid{sentinel}}%
 \begin{itemdecl}
 template<bool OtherConst>
-  requires sized_sentinel_for<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
+  requires @\libconcept{sized_sentinel_for}@<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
 friend constexpr range_difference_t<@\exposid{maybe-const}@<OtherConst, V>>
   operator-(const @\exposid{iterator}@<OtherConst>& x, const @\exposid{sentinel}@& y);
 \end{itemdecl}
@@ -9890,7 +9891,7 @@ Equivalent to: \tcode{return x.\exposid{current_} - y.\exposid{end_};}
 \indexlibrarymember{operator-}{enumerate_view::\exposid{sentinel}}%
 \begin{itemdecl}
 template<bool OtherConst>
-  requires sized_sentinel_for<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
+  requires @\libconcept{sized_sentinel_for}@<sentinel_t<@\exposid{Base}@>, iterator_t<@\exposid{maybe-const}@<OtherConst, V>>>
 friend constexpr range_difference_t<@\exposid{maybe-const}@<OtherConst, V>>
   operator-(const @\exposid{sentinel}@& x, const @\exposid{iterator}@<OtherConst>& y);
 \end{itemdecl}
